@@ -9,6 +9,9 @@ let currentScene = 0;
 let sceneGif = document.getElementById('scene-gif');
 const animationContainer = document.getElementById('animation-container');
 
+// 다음 씬을 미리 로드하기 위한 이미지 요소
+let preloadGif = null;
+
 function showScene(sceneNumber) {
     const scenePath = `src/image/scene${sceneNumber}.gif`;
     
@@ -17,60 +20,106 @@ function showScene(sceneNumber) {
     const timestamp = new Date().getTime();
     const scenePathWithCache = `${scenePath}?t=${timestamp}`;
     
-    // 모바일에서 GIF 재생을 보장하기 위해 이미지 요소를 완전히 재생성
-    if (sceneGif && sceneGif.parentNode) {
-        sceneGif.classList.add('hidden');
-        // 기존 이미지 제거
-        const oldGif = sceneGif;
-        oldGif.src = '';
-        oldGif.remove();
+    // 기존 이미지 요소가 없으면 생성
+    if (!sceneGif || !sceneGif.parentNode) {
+        sceneGif = document.createElement('img');
+        sceneGif.id = 'scene-gif';
+        sceneGif.alt = '애니메이션';
+        sceneGif.loading = 'eager';
+        sceneGif.decoding = 'async';
+        animationContainer.appendChild(sceneGif);
     }
     
-    // 새로운 이미지 요소 생성
-    sceneGif = document.createElement('img');
-    sceneGif.id = 'scene-gif';
-    sceneGif.alt = '애니메이션';
-    sceneGif.loading = 'eager';
-    sceneGif.decoding = 'async';
-    sceneGif.classList.add('hidden');
-    
-    // load 이벤트 리스너 추가 (모바일에서 재생 보장)
-    const handleLoad = () => {
+    // preload 이미지가 있으면 그것을 사용 (이미 로드된 이미지)
+    if (preloadGif && preloadGif.complete && preloadGif.src.includes(`scene${sceneNumber}`)) {
+        // preload된 이미지를 메인으로 교체
+        const temp = sceneGif;
+        sceneGif = preloadGif;
+        preloadGif = temp;
+        
+        // 기존 이미지 제거
+        if (preloadGif && preloadGif.parentNode) {
+            preloadGif.remove();
+        }
+        
+        // 새 이미지 표시
+        sceneGif.id = 'scene-gif';
+        sceneGif.style.opacity = '1';
         sceneGif.classList.remove('hidden');
+        
         // 모바일에서 GIF 재생을 강제하기 위한 트릭
         sceneGif.style.display = 'none';
         sceneGif.offsetHeight; // 리플로우 강제
         sceneGif.style.display = 'block';
         
-        // 추가 재생 보장 (iOS Safari 대응)
-        setTimeout(() => {
-            sceneGif.style.visibility = 'hidden';
-            sceneGif.offsetHeight;
-            sceneGif.style.visibility = 'visible';
-        }, 50);
+        return;
+    }
+    
+    // 기존 이미지를 fade out하지 않고 바로 교체
+    // 다음 이미지를 미리 로드
+    if (!preloadGif) {
+        preloadGif = document.createElement('img');
+        preloadGif.loading = 'eager';
+        preloadGif.decoding = 'async';
+        preloadGif.style.position = 'absolute';
+        preloadGif.style.opacity = '0';
+        preloadGif.style.pointerEvents = 'none';
+        animationContainer.appendChild(preloadGif);
+    }
+    
+    // preload 이미지에 새 이미지 로드
+    preloadGif.src = scenePathWithCache;
+    
+    // preload 이미지가 로드되면 메인 이미지와 교체
+    const handlePreload = () => {
+        if (preloadGif && preloadGif.complete) {
+            // 기존 메인 이미지 제거
+            if (sceneGif && sceneGif.parentNode) {
+                sceneGif.remove();
+            }
+            
+            // preload 이미지를 메인으로 교체
+            sceneGif = preloadGif;
+            sceneGif.id = 'scene-gif';
+            sceneGif.style.position = '';
+            sceneGif.style.opacity = '1';
+            sceneGif.style.pointerEvents = '';
+            sceneGif.classList.remove('hidden');
+            
+            // preload 변수 초기화
+            preloadGif = null;
+            
+            // 모바일에서 GIF 재생을 강제하기 위한 트릭
+            sceneGif.style.display = 'none';
+            sceneGif.offsetHeight; // 리플로우 강제
+            sceneGif.style.display = 'block';
+            
+            // 추가 재생 보장 (iOS Safari 대응)
+            setTimeout(() => {
+                sceneGif.style.visibility = 'hidden';
+                sceneGif.offsetHeight;
+                sceneGif.style.visibility = 'visible';
+            }, 50);
+        }
     };
     
-    sceneGif.addEventListener('load', handleLoad, { once: true });
+    // 기존 이벤트 리스너 제거 후 새로 추가
+    preloadGif.removeEventListener('load', handlePreload);
+    preloadGif.addEventListener('load', handlePreload, { once: true });
     
     // 에러 처리
-    sceneGif.addEventListener('error', () => {
+    preloadGif.addEventListener('error', () => {
         console.error(`Failed to load scene ${sceneNumber}`);
         // 재시도
         setTimeout(() => {
             const retryTimestamp = new Date().getTime();
-            sceneGif.src = `${scenePath}?t=${retryTimestamp}`;
+            preloadGif.src = `${scenePath}?t=${retryTimestamp}`;
         }, 100);
     }, { once: true });
     
-    // 컨테이너에 추가
-    animationContainer.appendChild(sceneGif);
-    
-    // 이미지 로드 시작
-    sceneGif.src = scenePathWithCache;
-    
     // 이미 로드된 경우를 대비
-    if (sceneGif.complete) {
-        handleLoad();
+    if (preloadGif.complete) {
+        handlePreload();
     }
 }
 
