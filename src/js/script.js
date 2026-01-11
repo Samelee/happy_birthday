@@ -6,16 +6,72 @@ function getUrlParameter(name) {
 
 // 씬 전환 함수
 let currentScene = 0;
-const sceneGif = document.getElementById('scene-gif');
+let sceneGif = document.getElementById('scene-gif');
+const animationContainer = document.getElementById('animation-container');
 
 function showScene(sceneNumber) {
     const scenePath = `src/image/scene${sceneNumber}.gif`;
-    // GIF를 새로 로드하여 처음부터 재생되도록
-    sceneGif.src = ''; // 먼저 초기화
-    setTimeout(() => {
-        sceneGif.src = scenePath;
+    
+    // 모바일 브라우저에서 GIF가 재생되도록 강제 재로드
+    // 타임스탬프를 추가하여 캐시 우회
+    const timestamp = new Date().getTime();
+    const scenePathWithCache = `${scenePath}?t=${timestamp}`;
+    
+    // 모바일에서 GIF 재생을 보장하기 위해 이미지 요소를 완전히 재생성
+    if (sceneGif && sceneGif.parentNode) {
+        sceneGif.classList.add('hidden');
+        // 기존 이미지 제거
+        const oldGif = sceneGif;
+        oldGif.src = '';
+        oldGif.remove();
+    }
+    
+    // 새로운 이미지 요소 생성
+    sceneGif = document.createElement('img');
+    sceneGif.id = 'scene-gif';
+    sceneGif.alt = '애니메이션';
+    sceneGif.loading = 'eager';
+    sceneGif.decoding = 'async';
+    sceneGif.classList.add('hidden');
+    
+    // load 이벤트 리스너 추가 (모바일에서 재생 보장)
+    const handleLoad = () => {
         sceneGif.classList.remove('hidden');
-    }, 50);
+        // 모바일에서 GIF 재생을 강제하기 위한 트릭
+        sceneGif.style.display = 'none';
+        sceneGif.offsetHeight; // 리플로우 강제
+        sceneGif.style.display = 'block';
+        
+        // 추가 재생 보장 (iOS Safari 대응)
+        setTimeout(() => {
+            sceneGif.style.visibility = 'hidden';
+            sceneGif.offsetHeight;
+            sceneGif.style.visibility = 'visible';
+        }, 50);
+    };
+    
+    sceneGif.addEventListener('load', handleLoad, { once: true });
+    
+    // 에러 처리
+    sceneGif.addEventListener('error', () => {
+        console.error(`Failed to load scene ${sceneNumber}`);
+        // 재시도
+        setTimeout(() => {
+            const retryTimestamp = new Date().getTime();
+            sceneGif.src = `${scenePath}?t=${retryTimestamp}`;
+        }, 100);
+    }, { once: true });
+    
+    // 컨테이너에 추가
+    animationContainer.appendChild(sceneGif);
+    
+    // 이미지 로드 시작
+    sceneGif.src = scenePathWithCache;
+    
+    // 이미 로드된 경우를 대비
+    if (sceneGif.complete) {
+        handleLoad();
+    }
 }
 
 // 생일 축하 텍스트 표시
