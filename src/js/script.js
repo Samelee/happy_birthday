@@ -64,14 +64,199 @@ function handleRouting() {
     }
 }
 
+// 공유하기 기능
+function shareCurrentPage() {
+    const currentUrl = window.location.href;
+    
+    // Web Share API 사용 (모바일)
+    if (navigator.share) {
+        navigator.share({
+            title: '생일 축하합니다! 🎂',
+            text: '특별한 사람을 위한 생일 축하 애니메이션',
+            url: currentUrl
+        }).catch((err) => {
+            console.log('공유 취소됨:', err);
+        });
+    } else {
+        // 클립보드에 복사
+        copyToClipboard(currentUrl);
+    }
+}
+
+// 클립보드에 복사
+function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('링크가 복사되었습니다!');
+        }).catch(() => {
+            fallbackCopyToClipboard(text);
+        });
+    } else {
+        fallbackCopyToClipboard(text);
+    }
+}
+
+// Fallback 복사 방법
+function fallbackCopyToClipboard(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    textArea.style.left = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+        document.execCommand('copy');
+        showToast('링크가 복사되었습니다!');
+    } catch (err) {
+        showToast('복사에 실패했습니다. URL을 직접 복사해주세요.');
+    }
+    document.body.removeChild(textArea);
+}
+
+// 토스트 메시지 표시
+function showToast(message) {
+    // 기존 토스트 제거
+    const existingToast = document.getElementById('toast');
+    if (existingToast) {
+        existingToast.remove();
+    }
+    
+    const toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 25px;
+        z-index: 3000;
+        font-size: 14px;
+        animation: toast-appear 0.3s ease-out;
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'toast-disappear 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+    }, 2000);
+}
+
+// 메타데이터 업데이트
+function updateMetaTags(name) {
+    const title = name ? `${name}님 생일 축하합니다! 🎂` : '생일 축하합니다! 🎂';
+    const description = name ? `${name}님을 위한 특별한 생일 축하 애니메이션` : '특별한 사람을 위한 생일 축하 애니메이션을 만들어보세요!';
+    const currentUrl = window.location.href;
+    
+    // 이미지 URL 생성 (절대 경로)
+    const baseUrl = window.location.origin;
+    const path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+    const imageUrl = `${baseUrl}${path}/src/image/main.png`;
+    
+    // Title 업데이트
+    document.title = title;
+    const titleMeta = document.querySelector('meta[name="title"]');
+    if (titleMeta) titleMeta.setAttribute('content', title);
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute('content', title);
+    const twitterTitle = document.querySelector('meta[property="twitter:title"]');
+    if (twitterTitle) twitterTitle.setAttribute('content', title);
+    
+    // Description 업데이트
+    const descMeta = document.querySelector('meta[name="description"]');
+    if (descMeta) descMeta.setAttribute('content', description);
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute('content', description);
+    const twitterDesc = document.querySelector('meta[property="twitter:description"]');
+    if (twitterDesc) twitterDesc.setAttribute('content', description);
+    
+    // URL 업데이트
+    const ogUrl = document.querySelector('meta[property="og:url"]');
+    if (ogUrl) ogUrl.setAttribute('content', currentUrl);
+    const twitterUrl = document.querySelector('meta[property="twitter:url"]');
+    if (twitterUrl) twitterUrl.setAttribute('content', currentUrl);
+    
+    // Image URL 업데이트 (절대 경로)
+    const ogImage = document.querySelector('meta[property="og:image"]');
+    if (ogImage) ogImage.setAttribute('content', imageUrl);
+    const twitterImage = document.querySelector('meta[property="twitter:image"]');
+    if (twitterImage) twitterImage.setAttribute('content', imageUrl);
+}
+
+// 모바일 최적화: 뷰포트 높이 조정
+function setViewportHeight() {
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+}
+
+// 모바일 최적화: 터치 이벤트 처리
+function setupMobileOptimizations() {
+    // 더블탭 줌 방지
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', (event) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
+    
+    // 스크롤 방지 (애니메이션 페이지)
+    document.addEventListener('touchmove', (e) => {
+        if (e.target.closest('#animation-container')) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+    
+    // iOS Safari 주소창 대응
+    window.addEventListener('resize', setViewportHeight);
+    window.addEventListener('orientationchange', () => {
+        setTimeout(setViewportHeight, 100);
+    });
+    
+    // 초기 설정
+    setViewportHeight();
+}
+
 // 페이지 로드 시 실행
 window.addEventListener('DOMContentLoaded', () => {
     handleRouting();
     
+    // 모바일 최적화 설정
+    setupMobileOptimizations();
+    
     const name = getUrlParameter('name') || '친구';
     
-    // 5초 대기 후 애니메이션 시작
-    setTimeout(() => {
-        startAnimation(name);
-    }, 5000);
+    // 메타데이터 업데이트
+    updateMetaTags(name);
+    
+    // 버튼 이벤트 리스너
+    const shareBtn = document.getElementById('shareBtn');
+    const createBtn = document.getElementById('createBtn');
+    
+    if (shareBtn) {
+        // 클릭과 터치 모두 지원
+        shareBtn.addEventListener('click', shareCurrentPage);
+        shareBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            shareCurrentPage();
+        });
+    }
+    
+    if (createBtn) {
+        createBtn.addEventListener('click', () => {
+            window.location.href = './admin.html';
+        });
+        createBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            window.location.href = './admin.html';
+        });
+    }
+    
+    // 애니메이션 바로 시작
+    startAnimation(name);
 });

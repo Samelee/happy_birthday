@@ -2,7 +2,10 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#667eea">
     <title>생일 축하 애니메이션 - 관리</title>
     <style>
         * {
@@ -11,13 +14,139 @@
             box-sizing: border-box;
         }
 
+        html {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
         body {
             font-family: 'Courier New', monospace;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 100%;
+            height: 100%;
             min-height: 100vh;
+            min-height: 100dvh;
+            min-height: -webkit-fill-available; /* iOS Safari 대응 */
             display: flex;
             justify-content: center;
             align-items: center;
+            align-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            margin: 0;
+            overflow: auto;
+            position: relative;
+        }
+        
+        /* 모바일 최적화 */
+        @media (max-width: 768px) {
+            html {
+                width: 100%;
+                height: 100%;
+            }
+            
+            body {
+                width: 100%;
+                height: 100%;
+                padding: 10px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                align-content: center;
+            }
+            
+            .container {
+                padding: 30px 20px;
+                margin: 0 auto;
+                width: calc(100% - 30px);
+                max-width: 450px;
+            }
+            
+            h1 {
+                font-size: 24px;
+                margin-bottom: 25px;
+            }
+            
+            .input-group {
+                margin-bottom: 18px;
+            }
+            
+            label {
+                font-size: 14px;
+            }
+            
+            button {
+                padding: 14px;
+                font-size: 15px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            html {
+                width: 100%;
+                height: 100%;
+            }
+            
+            body {
+                width: 100%;
+                height: 100%;
+                padding: 8px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                align-content: center;
+            }
+            
+            .container {
+                padding: 25px 15px;
+                border-radius: 15px;
+                margin: 0 auto;
+                width: calc(100% - 20px);
+                max-width: 100%;
+            }
+            
+            h1 {
+                font-size: 22px;
+                margin-bottom: 20px;
+            }
+            
+            button {
+                padding: 12px;
+                font-size: 14px;
+            }
+        }
+        
+        @media (orientation: landscape) and (max-height: 500px) {
+            html {
+                width: 100%;
+                height: 100%;
+            }
+            
+            body {
+                width: 100%;
+                height: 100%;
+                padding: 8px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                align-content: center;
+            }
+            
+            .container {
+                padding: 20px;
+                max-width: 90%;
+                margin: 0 auto;
+            }
+            
+            h1 {
+                font-size: 20px;
+                margin-bottom: 15px;
+            }
         }
 
         .container {
@@ -27,6 +156,8 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             max-width: 500px;
             width: 90%;
+            margin: 0 auto;
+            position: relative;
         }
 
         h1 {
@@ -34,6 +165,7 @@
             margin-bottom: 30px;
             color: #333;
             font-size: 28px;
+            word-break: keep-all;
         }
 
         .input-group {
@@ -49,12 +181,22 @@
 
         input {
             width: 100%;
-            padding: 12px;
+            padding: 14px;
             border: 2px solid #ddd;
             border-radius: 8px;
             font-size: 16px;
             font-family: 'Courier New', monospace;
             transition: border-color 0.3s;
+            -webkit-appearance: none;
+            appearance: none;
+            box-sizing: border-box;
+        }
+        
+        /* iOS에서 입력 필드 줌 방지 */
+        @media screen and (max-width: 768px) {
+            input {
+                font-size: 16px; /* iOS에서 줌 방지 */
+            }
         }
 
         input:focus {
@@ -64,7 +206,8 @@
 
         button {
             width: 100%;
-            padding: 14px;
+            padding: 16px;
+            min-height: 50px; /* 터치 영역 확보 */
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
@@ -74,6 +217,9 @@
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
             font-family: 'Courier New', monospace;
+            -webkit-tap-highlight-color: rgba(255, 255, 255, 0.3);
+            touch-action: manipulation;
+            user-select: none;
         }
 
         button:hover {
@@ -82,7 +228,7 @@
         }
 
         button:active {
-            transform: translateY(0);
+            transform: translateY(0) scale(0.98);
         }
 
         .message {
@@ -124,7 +270,8 @@
         const shareBtn = document.getElementById('shareBtn');
         const message = document.getElementById('message');
 
-        shareBtn.addEventListener('click', () => {
+        // 링크 복사 + 새 창으로 열기 (내부 공유 아님)
+        function handleShare() {
             const name = nameInput.value.trim();
             
             if (!name) {
@@ -132,28 +279,55 @@
                 return;
             }
 
-            const url = `${window.location.origin}/?name=${encodeURIComponent(name)}`;
+            const url = `${window.location.origin}${window.location.pathname.replace('admin.html', '')}?name=${encodeURIComponent(name)}`;
             
             // 클립보드에 복사
-            navigator.clipboard.writeText(url).then(() => {
-                showMessage('URL이 클립보드에 복사되었습니다!', 'success');
-            }).catch(() => {
-                // 클립보드 API가 실패하면 fallback
-                const textArea = document.createElement('textarea');
-                textArea.value = url;
-                textArea.style.position = 'fixed';
-                textArea.style.opacity = '0';
-                document.body.appendChild(textArea);
-                textArea.select();
-                try {
-                    document.execCommand('copy');
+            copyUrl(url);
+        }
+        
+        function copyUrl(url) {
+            // 클립보드에 복사
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(() => {
                     showMessage('URL이 클립보드에 복사되었습니다!', 'success');
-                } catch (err) {
-                    showMessage('복사에 실패했습니다. URL을 직접 복사해주세요: ' + url, 'error');
-                }
-                document.body.removeChild(textArea);
-            });
+                    // 새 창/탭으로 페이지 열기
+                    setTimeout(() => {
+                        window.open(url, '_blank');
+                    }, 300);
+                }).catch(() => {
+                    fallbackCopy(url);
+                });
+            } else {
+                fallbackCopy(url);
+            }
+        }
+        
+        shareBtn.addEventListener('click', handleShare);
+        shareBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            handleShare();
         });
+        
+        function fallbackCopy(url) {
+            const textArea = document.createElement('textarea');
+            textArea.value = url;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showMessage('URL이 클립보드에 복사되었습니다!', 'success');
+                // 새 창/탭으로 페이지 열기
+                setTimeout(() => {
+                    window.open(url, '_blank');
+                }, 300);
+            } catch (err) {
+                showMessage('복사에 실패했습니다. URL을 직접 복사해주세요: ' + url, 'error');
+            }
+            document.body.removeChild(textArea);
+        }
 
         function showMessage(text, type) {
             message.textContent = text;

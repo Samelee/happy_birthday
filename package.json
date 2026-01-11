@@ -1,0 +1,28 @@
+{
+  "name": "happy-birthday-animation",
+  "version": "1.0.0",
+  "description": "특별한 사람을 위한 도트 스타일 생일 축하 애니메이션 웹 애플리케이션",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 8000 -c-1",
+    "dev": "npx http-server -p 8000 -c-1 -o"
+  },
+  "keywords": [
+    "birthday",
+    "animation",
+    "pixel-art",
+    "gif",
+    "celebration",
+    "korean"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/happy-birthday.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/happy-birthday/issues"
+  },
+  "homepage": "https://github.com/your-username/happy-birthday#readme"
+}
