@@ -10,8 +10,12 @@ const sceneGif = document.getElementById('scene-gif');
 
 function showScene(sceneNumber) {
     const scenePath = `src/image/scene${sceneNumber}.gif`;
-    sceneGif.src = scenePath;
-    sceneGif.classList.remove('hidden');
+    // GIF를 새로 로드하여 처음부터 재생되도록
+    sceneGif.src = ''; // 먼저 초기화
+    setTimeout(() => {
+        sceneGif.src = scenePath;
+        sceneGif.classList.remove('hidden');
+    }, 50);
 }
 
 // 생일 축하 텍스트 표시
@@ -26,32 +30,33 @@ function showBirthdayText(name) {
 // 메인 애니메이션 시퀀스
 function startAnimation(name) {
     currentScene = 1;
+    const gifDuration = 8000; // 모든 GIF는 8초
     
-    // 씬 1: 길을 걷는 장면 (3초)
+    // 씬 1: 길을 걷는 장면 (8초)
     showScene(1);
     
     setTimeout(() => {
         currentScene = 2;
-        // 씬 2: 언덕 끝에서 도시 바라보기 (2초)
+        // 씬 2: 언덕 끝에서 도시 바라보기 (8초)
         showScene(2);
         
         setTimeout(() => {
             currentScene = 3;
-            // 씬 3: 불꽃놀이만 보이는 하늘 (2초)
+            // 씬 3: 불꽃놀이만 보이는 하늘 (8초)
             showScene(3);
             
             setTimeout(() => {
                 currentScene = 4;
-                // 씬 4: 언덕에 앉아서 불꽃놀이 보기 (3초)
+                // 씬 4: 언덕에 앉아서 불꽃놀이 보기 (8초)
                 showScene(4);
                 
-                // scene4.gif 위에 생일 축하 텍스트 표시
+                // scene4.gif 위에 생일 축하 텍스트 표시 (GIF가 끝까지 재생된 후)
                 setTimeout(() => {
                     showBirthdayText(name);
-                }, 1000);
-            }, 2000);
-        }, 2000);
-    }, 3000);
+                }, gifDuration); // 씬 4가 끝까지 재생된 후 텍스트 표시
+            }, gifDuration); // 씬 3 재생 시간 (8초)
+        }, gifDuration); // 씬 2 재생 시간 (8초)
+    }, gifDuration); // 씬 1 재생 시간 (8초)
 }
 
 // 라우팅 처리
