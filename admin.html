@@ -279,7 +279,13 @@
                 return;
             }
 
-            const url = `${window.location.origin}${window.location.pathname.replace('admin.html', '')}?name=${encodeURIComponent(name)}`;
+            // 메인 페이지 URL 생성 (admin 제거하고 루트로)
+            const pathname = window.location.pathname;
+            let basePath = pathname.replace(/\/admin(\.html)?$/, ''); // /admin 또는 /admin.html 제거
+            if (!basePath.endsWith('/')) {
+                basePath += '/'; // 루트 경로로
+            }
+            const url = `${window.location.origin}${basePath}?name=${encodeURIComponent(name)}`;
             
             // 클립보드에 복사
             copyUrl(url);
