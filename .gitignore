@@ -23,3 +23,8 @@ build/
 # Environment
 .env
 .env.local
+
+compress_gifs_aggressive.sh
+compress_gifs.py
+compress_gifs.sh
+README_COMPRESS.md

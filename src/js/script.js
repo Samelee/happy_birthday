@@ -157,9 +157,35 @@ function showBirthdayText(name) {
     birthdayText.classList.remove('hidden');
 }
 
+// 로딩 화면 표시
+function showLoadingScreen() {
+    const loadingScreen = document.getElementById('loading-screen');
+    const animationContainer = document.getElementById('animation-container');
+    if (loadingScreen) {
+        loadingScreen.classList.remove('hidden');
+    }
+    if (animationContainer) {
+        animationContainer.classList.add('hidden');
+    }
+}
+
+// 로딩 화면 숨기기
+function hideLoadingScreen() {
+    const loadingScreen = document.getElementById('loading-screen');
+    const animationContainer = document.getElementById('animation-container');
+    if (loadingScreen) {
+        loadingScreen.classList.add('hidden');
+    }
+    if (animationContainer) {
+        animationContainer.classList.remove('hidden');
+    }
+}
+
 // 모든 GIF를 미리 로드하는 함수 (실제 img 요소 사용)
 async function preloadAllGifs() {
     const preloadedImages = [];
+    const loadingScreen = document.getElementById('loading-screen');
+    const loadingText = loadingScreen?.querySelector('.loading-text');
     
     for (let i = 1; i <= 4; i++) {
         const img = document.createElement('img');
@@ -174,7 +200,14 @@ async function preloadAllGifs() {
         
         const scenePath = `src/image/scene${i}.gif`;
         const promise = new Promise((resolve, reject) => {
-            img.onload = () => resolve(img);
+            // 로딩 진행 상황 업데이트
+            if (loadingText) {
+                loadingText.textContent = `생일축하 로딩중... (${i}/4)`;
+            }
+            
+            img.onload = () => {
+                resolve(img);
+            };
             img.onerror = () => {
                 console.error(`Failed to load scene ${i}`);
                 // 재시도
@@ -477,6 +510,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     // 메타데이터 업데이트
     updateMetaTags(name);
     
+    // 로딩 화면 표시
+    showLoadingScreen();
+    
     // 버튼 이벤트 리스너
     const shareBtn = document.getElementById('shareBtn');
     const createBtn = document.getElementById('createBtn');
@@ -503,10 +539,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     // 모든 GIF를 미리 로드한 후 애니메이션 시작
     try {
         preloadedGifs = await preloadAllGifs();
+        
+        // 로딩 화면 숨기기
+        hideLoadingScreen();
+        
         // 로드 완료 후 애니메이션 시작
         startAnimation(name);
     } catch (error) {
         console.error('Failed to preload GIFs:', error);
+        
+        // 로딩 화면 숨기기 (에러가 발생해도)
+        hideLoadingScreen();
+        
         // 로드 실패해도 애니메이션 시작 (기존 방식으로 fallback)
         preloadedGifs = null;
         startAnimation(name);
