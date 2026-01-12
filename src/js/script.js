@@ -9,6 +9,7 @@ let currentScene = 0;
 let sceneGif = document.getElementById('scene-gif');
 let nextGif = null; // 다음 씬을 위한 두 번째 이미지 요소
 const animationContainer = document.getElementById('animation-container');
+let preloadedGifs = null; // 미리 로드된 GIF 저장
 
 function showScene(sceneNumber) {
     const scenePath = `src/image/scene${sceneNumber}.gif`;
@@ -156,74 +157,144 @@ function showBirthdayText(name) {
     birthdayText.classList.remove('hidden');
 }
 
-// 다음 씬을 미리 로드하는 함수
-function preloadNextScene(sceneNumber) {
-    if (sceneNumber > 4) return; // 마지막 씬이면 미리 로드할 필요 없음
+// 모든 GIF를 미리 로드하는 함수 (실제 img 요소 사용)
+async function preloadAllGifs() {
+    const preloadedImages = [];
     
+    for (let i = 1; i <= 4; i++) {
+        const img = document.createElement('img');
+        img.loading = 'eager';
+        img.decoding = 'async';
+        img.style.position = 'absolute';
+        img.style.opacity = '0';
+        img.style.pointerEvents = 'none';
+        img.style.width = '1px';
+        img.style.height = '1px';
+        img.style.top = '-9999px';
+        
+        const scenePath = `src/image/scene${i}.gif`;
+        const promise = new Promise((resolve, reject) => {
+            img.onload = () => resolve(img);
+            img.onerror = () => {
+                console.error(`Failed to load scene ${i}`);
+                // 재시도
+                setTimeout(() => {
+                    const retryTimestamp = new Date().getTime();
+                    img.src = `${scenePath}?t=${retryTimestamp}`;
+                }, 500);
+            };
+            img.src = scenePath;
+            
+            // 이미 로드된 경우
+            if (img.complete && img.naturalWidth > 0) {
+                resolve(img);
+            }
+        });
+        
+        document.body.appendChild(img);
+        preloadedImages.push(promise);
+    }
+    
+    return Promise.all(preloadedImages);
+}
+
+// 씬을 표시하는 함수 (미리 로드된 img 요소 사용)
+function displayScene(preloadedImg, sceneNumber) {
+    // 기존 이미지 요소가 없으면 생성
+    if (!sceneGif || !sceneGif.parentNode) {
+        sceneGif = document.createElement('img');
+        sceneGif.id = 'scene-gif';
+        sceneGif.alt = '애니메이션';
+        sceneGif.classList.add('gif-layer');
+        animationContainer.appendChild(sceneGif);
+    }
+    
+    // 미리 로드된 이미지가 있으면 그 src를 사용 (이미 캐시에 있음)
+    // 없으면 새로 로드 (타임스탬프 추가하여 강제 재생)
+    const scenePath = `src/image/scene${sceneNumber}.gif`;
+    if (preloadedImg && preloadedImg.complete && preloadedImg.naturalWidth > 0) {
+        // 미리 로드된 이미지의 src 사용 (이미 캐시에 있음)
+        sceneGif.src = preloadedImg.src;
+    } else {
+        // 새로 로드 (타임스탬프 추가하여 강제 재생)
+        const timestamp = new Date().getTime();
+        sceneGif.src = `${scenePath}?t=${timestamp}`;
+    }
+    
+    sceneGif.classList.remove('hidden');
+    
+    // 모바일에서 GIF 재생을 강제하기 위한 트릭
+    sceneGif.style.display = 'none';
+    sceneGif.offsetHeight; // 리플로우 강제
+    sceneGif.style.display = 'block';
+    
+    // 추가 재생 보장 (iOS Safari 대응)
+    setTimeout(() => {
+        sceneGif.style.visibility = 'hidden';
+        sceneGif.offsetHeight;
+        sceneGif.style.visibility = 'visible';
+    }, 50);
+}
+
+// 기존 showScene 함수를 간단하게 유지 (하위 호환성)
+function showScene(sceneNumber) {
     const scenePath = `src/image/scene${sceneNumber}.gif`;
     const timestamp = new Date().getTime();
     const scenePathWithCache = `${scenePath}?t=${timestamp}`;
     
-    // nextGif가 없으면 생성
-    if (!nextGif) {
-        nextGif = document.createElement('img');
-        nextGif.loading = 'eager';
-        nextGif.decoding = 'async';
-        nextGif.classList.add('gif-layer');
-        nextGif.style.opacity = '0';
-        nextGif.style.zIndex = '0';
-        animationContainer.appendChild(nextGif);
+    // 첫 번째 씬인 경우
+    if (!sceneGif || !sceneGif.parentNode) {
+        sceneGif = document.createElement('img');
+        sceneGif.id = 'scene-gif';
+        sceneGif.alt = '애니메이션';
+        sceneGif.loading = 'eager';
+        sceneGif.decoding = 'async';
+        sceneGif.classList.add('gif-layer');
+        animationContainer.appendChild(sceneGif);
+        
+        // 이미지 로드 및 표시
+        sceneGif.src = scenePathWithCache;
+        sceneGif.classList.remove('hidden');
+        
+        // 모바일에서 GIF 재생을 강제하기 위한 트릭
+        sceneGif.addEventListener('load', () => {
+            sceneGif.style.display = 'none';
+            sceneGif.offsetHeight; // 리플로우 강제
+            sceneGif.style.display = 'block';
+        }, { once: true });
     }
-    
-    // 다음 씬 미리 로드
-    nextGif.src = scenePathWithCache;
 }
 
-// 메인 애니메이션 시퀀스
+// 메인 애니메이션 시퀀스 (로드 완료 후 실행)
 function startAnimation(name) {
-    currentScene = 1;
     const gifDuration = 8000; // 모든 GIF는 8초
     
     // 씬 1: 길을 걷는 장면 (8초)
-    showScene(1);
-    
-    // 씬 1이 시작되면 씬 2를 미리 로드
-    setTimeout(() => {
-        preloadNextScene(2);
-    }, 1000); // 1초 후 미리 로드 시작
+    currentScene = 1;
+    displayScene(preloadedGifs && preloadedGifs[0] ? preloadedGifs[0] : null, 1);
     
     setTimeout(() => {
-        currentScene = 2;
         // 씬 2: 언덕 끝에서 도시 바라보기 (8초)
-        showScene(2);
-        
-        // 씬 2가 시작되면 씬 3을 미리 로드
-        setTimeout(() => {
-            preloadNextScene(3);
-        }, 1000);
+        currentScene = 2;
+        displayScene(preloadedGifs && preloadedGifs[1] ? preloadedGifs[1] : null, 2);
         
         setTimeout(() => {
-            currentScene = 3;
             // 씬 3: 불꽃놀이만 보이는 하늘 (8초)
-            showScene(3);
-            
-            // 씬 3이 시작되면 씬 4를 미리 로드
-            setTimeout(() => {
-                preloadNextScene(4);
-            }, 1000);
+            currentScene = 3;
+            displayScene(preloadedGifs && preloadedGifs[2] ? preloadedGifs[2] : null, 3);
             
             setTimeout(() => {
-                currentScene = 4;
                 // 씬 4: 언덕에 앉아서 불꽃놀이 보기 (8초)
-                showScene(4);
+                currentScene = 4;
+                displayScene(preloadedGifs && preloadedGifs[3] ? preloadedGifs[3] : null, 4);
                 
-                // scene4.gif 위에 생일 축하 텍스트 표시 (GIF가 끝까지 재생된 후)
                 setTimeout(() => {
+                    // scene4.gif 위에 생일 축하 텍스트 표시
                     showBirthdayText(name);
-                }, gifDuration); // 씬 4가 끝까지 재생된 후 텍스트 표시
-            }, gifDuration); // 씬 3 재생 시간 (8초)
-        }, gifDuration); // 씬 2 재생 시간 (8초)
-    }, gifDuration); // 씬 1 재생 시간 (8초)
+                }, gifDuration);
+            }, gifDuration);
+        }, gifDuration);
+    }, gifDuration);
 }
 
 // 라우팅 처리
@@ -395,7 +466,7 @@ function setupMobileOptimizations() {
 }
 
 // 페이지 로드 시 실행
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
     handleRouting();
     
     // 모바일 최적화 설정
@@ -429,6 +500,15 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // 애니메이션 바로 시작
-    startAnimation(name);
+    // 모든 GIF를 미리 로드한 후 애니메이션 시작
+    try {
+        preloadedGifs = await preloadAllGifs();
+        // 로드 완료 후 애니메이션 시작
+        startAnimation(name);
+    } catch (error) {
+        console.error('Failed to preload GIFs:', error);
+        // 로드 실패해도 애니메이션 시작 (기존 방식으로 fallback)
+        preloadedGifs = null;
+        startAnimation(name);
+    }
 });
